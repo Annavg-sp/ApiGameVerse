@@ -55,8 +55,3 @@ async def create_new_key(request: APIRequest, session: Session = Depends(get_ses
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Rol no válido")
     raw_key = await generate_new_key(request.role, session)
     return APIResponse(role=request.role, api_key=raw_key)
-
-# Ver tu rol actual
-@router.get("/me")
-async def read_role(role: str = Depends(get_api_key_from_headers)):
-    return { "message": f"Tu rol es '{role}'." }
