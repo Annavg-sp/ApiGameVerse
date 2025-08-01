@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session
+from sqlalchemy.orm import Session
 from app.database.database import get_session
 from app.database.models.videojuego import Videojuego, VideojuegoCreate, VideojuegoResponse
 from app.controllers.videojuegos import (
@@ -9,9 +9,10 @@ from app.controllers.videojuegos import (
     actualizar_videojuego,
     borrar_videojuego
 )
-from app.routes.auth import get_api_key_from_headers  # Seguridad con API Key tipo Bearer
+from app.routes.auth import get_api_key_from_headers  # Importamos la función para obtener y validar la API Key
 
-router = APIRouter(tags=["Videojuegos"])  # 👈 sin prefix
+# Crear el router para las rutas de videojuegos
+router = APIRouter(tags=["Videojuegos"])
 
 # Listar videojuegos con filtro opcional por género (acceso libre)
 @router.get("/", response_model=list[VideojuegoResponse])
@@ -35,30 +36,27 @@ async def obtener_videojuego_ruta(
         raise HTTPException(status_code=404, detail="Videojuego no encontrado")
     return videojuego
 
-# Crear un nuevo videojuego (solo admin)
-@router.post("/", status_code=status.HTTP_201_CREATED)
+# Crear un nuevo videojuego (solo admin, requiere autenticación Bearer)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=VideojuegoResponse)
 async def crear_videojuego_ruta(
     datos: VideojuegoCreate,
     session: Session = Depends(get_session),
-    role: str = Depends(get_api_key_from_headers)
+    role: str = Depends(get_api_key_from_headers)  # Verificación de la API Key
 ):
     if role != "admin":
         raise HTTPException(status_code=403, detail="Solo los administradores pueden crear videojuegos")
 
     videojuego = Videojuego(**datos.dict())
     creado = crear_videojuego(videojuego, session)
-    return {
-        "mensaje": f"🎮 ¡Videojuego '{creado.nombre}' creado exitosamente!",
-        "videojuego": creado
-    }
+    return creado  # Asegúrate de devolver el objeto correctamente
 
-# Actualizar un videojuego por ID (solo admin)
+# Actualizar un videojuego por ID (solo admin, requiere autenticación Bearer)
 @router.put("/{id}", response_model=VideojuegoResponse)
 async def actualizar_videojuego_ruta(
     id: int,
     datos: VideojuegoCreate,
     session: Session = Depends(get_session),
-    role: str = Depends(get_api_key_from_headers)
+    role: str = Depends(get_api_key_from_headers)  # Verificación de la API Key
 ):
     if role != "admin":
         raise HTTPException(status_code=403, detail="Solo los administradores pueden actualizar videojuegos")
@@ -68,12 +66,12 @@ async def actualizar_videojuego_ruta(
         raise HTTPException(status_code=404, detail="No se pudo actualizar el videojuego")
     return actualizado
 
-# Eliminar un videojuego por ID (solo admin)
+# Eliminar un videojuego por ID (solo admin, requiere autenticación Bearer)
 @router.delete("/{id}")
 async def eliminar_videojuego_ruta(
     id: int,
     session: Session = Depends(get_session),
-    role: str = Depends(get_api_key_from_headers)
+    role: str = Depends(get_api_key_from_headers)  # Verificación de la API Key
 ):
     if role != "admin":
         raise HTTPException(status_code=403, detail="Solo los administradores pueden eliminar videojuegos")

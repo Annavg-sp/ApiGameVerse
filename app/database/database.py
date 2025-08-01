@@ -1,10 +1,13 @@
-from sqlmodel import create_engine, Session  # Para crear el motor y gestionar sesiones
+from sqlmodel import create_engine, Session  # Para crear el motor de base de datos y abrir sesiones
 
-DB_URL = "sqlite:///app/database/gameverse.db"  # Ruta de la base de datos SQLite
+# Aquí defino la ruta de mi base de datos SQLite
+DB_URL = "sqlite:///app/database/gameverse.db"  # Está dentro de la carpeta del proyecto
 
-engine = create_engine(DB_URL, echo=True)  # Motor con log de operaciones SQL (echo=True)
+# Creo el motor que se va a encargar de conectar con SQLite
+# echo=True me sirve para ver las consultas SQL que se hacen en consola (muy útil para depurar)
+engine = create_engine(DB_URL, echo=True)
 
-# Función que genera una sesión para usar en las rutas
+# Esta función devuelve una sesión de base de datos para usar dentro de las rutas o controladores
 def get_session():
     with Session(engine) as session:
-        yield session  # Se usa con Depends para inyección automática
+        yield session  # Se usa con Depends para inyectarla automáticamente donde se necesite
