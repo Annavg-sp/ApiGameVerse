@@ -1,32 +1,56 @@
-from fastapi import FastAPI  # Importamos FastAPI para crear la app
-from sqlmodel import SQLModel  # Usamos SQLModel para manejar los modelos y la BD
-from app.database.database import engine  # Motor de conexión a la base de datos
-from app.routes import plataformas, videojuegos  # Importamos las rutas
+from fastapi import FastAPI
+from sqlmodel import SQLModel
+from app.database.database import engine
+from app.routes import plataformas, videojuegos, auth
+from app.database.models.apikey import API_Keys
 
-# Modelos que aseguran la creación de tablas en la BD
-from app.database.models.videojuego import Videojuego
-from app.database.models.plataforma import Plataforma
-
-# Creamos la instancia de la app
 app = FastAPI(
     title="GameVerse.API",
     version="1.0.0",
     description="Conéctate con el mundo de los videojuegos a través de GameVerse.API"
 )
 
-# Se crean las tablas si no existen
+# Crear todas las tablas
 SQLModel.metadata.create_all(engine)
 
-# Se incluyen las rutas separadas por recursos
+# Añadir esquema de seguridad para Swagger (candado Bearer)
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    from fastapi.openapi.utils import get_openapi
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer"
+        }
+    }
+
+    openapi_schema["security"] = [{"BearerAuth": []}]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
+
+# Incluir las rutas 
 app.include_router(videojuegos.router, prefix="/videojuegos", tags=["Videojuegos"])
 app.include_router(plataformas.router, prefix="/plataformas", tags=["Plataformas"])
+app.include_router(auth.router)  # Auth no necesita prefijo adicional
 
-# Ruta principal que muestra los endpoints disponibles
+#Ruta de bienvenida
 @app.get("/")
 async def index():
     return {
         "success": True,
         "data": {
-            "endpoints": ["/videojuegos", "/plataformas"]
+            "endpoints": ["/videojuegos", "/plataformas", "/auth"]
         }
     }
